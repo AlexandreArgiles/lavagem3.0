@@ -99,9 +99,30 @@ app.post('/api/lavagem-rapida', checkAuth, (req, res) => {
     });
 });;
 
-// Busca os agendamentos (Mudamos de JOIN para LEFT JOIN para evitar que agendamentos sumam)
+// Busca os agendamentos corrigida (Removida a duplicidade e garantindo retorno do telefone)
 app.get('/api/agenda', checkAuth, (req, res) => {
-    db.all("SELECT a.*, c.nome as cliente, c.telefone, v.placa, v.modelo, s.nome as servico FROM agendamentos a JOIN clientes c ON a.cliente_id = c.id JOIN veiculos v ON a.veiculo_id = v.id LEFT JOIN servicos s ON a.servico_id = s.id WHERE a.status = 'PENDENTE' ORDER BY a.data_agendada ASC", (err, rows) => res.json(rows||[]));
+    const sql = `
+        SELECT 
+            a.*, 
+            c.nome as cliente, 
+            c.telefone, 
+            v.placa, 
+            v.modelo, 
+            s.nome as servico 
+        FROM agendamentos a 
+        JOIN clientes c ON a.cliente_id = c.id 
+        JOIN veiculos v ON a.veiculo_id = v.id 
+        LEFT JOIN servicos s ON a.servico_id = s.id 
+        WHERE a.status = 'PENDENTE' 
+        ORDER BY a.data_agendada ASC`;
+
+    db.all(sql, (err, rows) => {
+        if (err) {
+            console.error("Erro ao buscar agenda:", err.message);
+            return res.status(500).json({ error: err.message });
+        }
+        res.json(rows || []);
+    });
 });
 
 // Iniciar Serviço Agendado (Proteção contra serviço deletado/sem preço)

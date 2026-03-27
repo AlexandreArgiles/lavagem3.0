@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - SpumaCar</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { display: flex; justify-content: center; align-items: center; height: 100vh; background-color: var(--bg-body); }
+        .login-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+        .login-card h1 { color: var(--primary); margin-bottom: 5px; }
+        .error-msg { color: var(--danger); margin-bottom: 15px; display: none; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="login-card" id="login-panel">
+    <img src="logo.png" alt="SpumaCar" class="login-logo">        <p style="color:#666; margin-bottom:30px;">Acesso Restrito</p>
+        <div id="error-msg" class="error-msg">Credenciais inválidas</div>
+        
+        <div style="text-align: left;">
+            <label style="font-weight:bold; display:block;">Usuário</label>
+            <input type="text" id="login-user" style="margin-bottom:15px;">
+            <label style="font-weight:bold; display:block;">Senha</label>
+            <input type="password" id="login-pass">
+        </div>
+        <button class="btn-primary" onclick="fazerLogin()" style="margin-top:20px;">Entrar</button>
+    </div>
+
+    <div class="login-card hidden" id="setup-panel">
+        <h1 style="color:var(--success)">✨ Bem-vindo!</h1>
+        <p style="color:#666; margin-bottom:20px;">Crie o Administrador do Sistema</p>
+        <div id="setup-error" class="error-msg">Erro ao criar</div>
+
+        <div style="text-align: left;">
+            <label style="font-weight:bold; display:block;">Login Admin</label>
+            <input type="text" id="setup-user" placeholder="admin">
+            <label style="font-weight:bold; display:block;">Senha</label>
+            <input type="password" id="setup-pass">
+            <label style="font-weight:bold; display:block;">Confirmar Senha</label>
+            <input type="password" id="setup-pass2">
+        </div>
+        <button class="btn-primary" onclick="fazerSetup()" style="margin-top:20px; background-color:var(--success);">Criar Sistema</button>
+    </div>
+
+    <script>
+        // Ao carregar, verifica o estado do sistema
+        (async function init() {
+            try {
+                const res = await fetch('/api/system-check');
+                const data = await res.json();
+                
+                if (!data.initialized) {
+                    // Sistema novo -> Mostra Setup
+                    document.getElementById('login-panel').classList.add('hidden');
+                    document.getElementById('setup-panel').classList.remove('hidden');
+                }
+            } catch (e) {
+                console.error("Erro ao conectar", e);
+            }
+        })();
+
+        async function fazerSetup() {
+            const login = document.getElementById('setup-user').value;
+            const s1 = document.getElementById('setup-pass').value;
+            const s2 = document.getElementById('setup-pass2').value;
+
+            if (!login || !s1) return alert('Preencha tudo');
+            if (s1 !== s2) return alert('Senhas não conferem');
+
+            const res = await fetch('/api/setup', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ login, senha: s1 })
+            });
+
+            if (res.ok) {
+                alert('Administrador criado com sucesso! Faça login.');
+                location.reload(); // Recarrega para mostrar o login normal
+            } else {
+                alert('Erro ao criar.');
+            }
+        }
+
+        async function fazerLogin(){
+            const u = document.getElementById('login-user').value;
+            const p = document.getElementById('login-pass').value;
+            const r = await fetch('/api/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({login:u, senha:p})
+            });
+            
+            if(r.ok) {
+                const data = await r.json();
+                localStorage.setItem('userPerfil', data.perfil);
+                window.location.href = 'index.html';
+            } else {
+                document.getElementById('error-msg').style.display = 'block';
+            }
+        }
+
+        document.addEventListener('keypress', e => { if(e.key==='Enter') fazerLogin(); });
+    </script>
+</body>
+</html>
