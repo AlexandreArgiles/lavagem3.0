@@ -1,0 +1,29 @@
+    # --- Dependências (Nunca enviar, são pesadas) ---
+node_modules/
+dist/
+package-lock.json
+
+# --- Banco de Dados (Dados sensíveis e locais) ---
+# Ignora o banco de produção para não sobrescrever dados ao baixar atualizações
+*.db
+*.db-journal
+*.sqlite
+lavajato.db
+
+# --- Arquivos Temporários de Upload (Restore) ---
+uploads/
+tmp/
+
+# --- Logs de Erro ---
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- Arquivos de Sistema Operacional ---
+.DS_Store
+Thumbs.db
+
+# --- Configurações de IDE (Opcional) ---
+.vscode/
+.idea/
