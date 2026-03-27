@@ -238,7 +238,12 @@ const pl={
 // ================== AGENDA (OBS ADICIONADO) ==================
 // ================== AGENDA & AVISOS AUTOMÁTICOS ==================
 window.listaAgendamentos = [];
-const agendaNotificada = new Set();
+
+// Função específica para o botão manual da agenda
+function chamarAgendaZap(telefone, cliente, hora, placa) {
+    const msg = `Olá ${cliente}! Tudo bem? \n\nAqui é da *SpumaCar*. \nPassando para lembrar do seu horário das *${hora}* para o veículo *${placa}*. \n\nAguardamos seu retorno!`;
+    enviarZap(telefone, msg);
+}
 
 async function loadAgenda(){
     const r=await fetch(`${API}/agenda`);
@@ -251,11 +256,13 @@ async function loadAgenda(){
 d.forEach(a=>{
         const dt=new Date(a.data_agendada);
         const servicoExtraHtml = a.servico_extra ? `<p style="color:#0369a1; margin: 3px 0;">➕ ${a.servico_extra} (R$ ${a.valor_extra || 0})</p>` : '';
+        const horaStr = dt.toLocaleTimeString().slice(0,5);
 
         v.innerHTML+=`<div class="patio-card" style="border-color:#bbf7d0">
             <div class="patio-header">
-                <span class="patio-placa" style="background:#dcfce7;color:#15803d">${dt.toLocaleTimeString().slice(0,5)} - ${dt.toLocaleDateString()}</span>
-                <button class="btn-action btn-delete" style="padding: 5px 10px; font-weight:bold; border-radius:6px;" onclick="cancelarAgenda(${a.id})">🗑️ Cancelar</button>            </div>
+                <span class="patio-placa" style="background:#dcfce7;color:#15803d">${horaStr} - ${dt.toLocaleDateString()}</span>
+                <button class="btn-action btn-delete" style="padding: 5px 10px; font-weight:bold; border-radius:6px;" onclick="cancelarAgenda(${a.id})">🗑️ Cancelar</button>
+            </div>
             <div class="patio-body">
                 <p><strong>${a.placa}</strong> (${a.modelo||''})</p>
                 <p>👤 ${a.cliente}</p>
@@ -263,10 +270,13 @@ d.forEach(a=>{
                 ${servicoExtraHtml}
                 <p style="font-style:italic;font-size:0.8rem;color:#d97706">${a.obs||''}</p>
             </div>
-            <button class="btn-primary" style="margin-top:10px;background:#15803d" onclick="iniciarServicoAgendado(${a.id},'${a.placa}')">▶️ Receber Veículo</button>
+            
+            <div style="display:flex; gap:10px; margin-top:15px; flex-wrap: wrap;">
+                <button class="btn-primary" style="flex:2; background:#15803d; min-width: 150px; padding: 10px 0;" onclick="iniciarServicoAgendado(${a.id},'${a.placa}')">▶️ Receber Veículo</button>
+                <button style="flex:1; background:#25D366; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; min-width: 100px; padding: 10px 0;" onclick="chamarAgendaZap('${a.telefone}', '${a.cliente}', '${horaStr}', '${a.placa}')">📱 Chamar</button>
+            </div>
         </div>`;
-    });
-}
+    });}
 
 async function salvarAgendamento(){
     // Descobre se a placa foi digitada ou escolhida na lista
@@ -303,42 +313,52 @@ async function salvarAgendamento(){
     }
 }
 
-// ⏰ VIGIA AUTOMÁTICO DE HORÁRIOS (COM HORA OFICIAL DA INTERNET)
+// ⏰ VIGIA AUTOMÁTICO DE HORÁRIOS (Versão Definitiva com Diagnóstico)
+const agendaNotificada = new Set();
+
 setInterval(async () => {
-    // Só roda se a agenda estiver carregada e com clientes
-    if(!window.listaAgendamentos || window.listaAgendamentos.length === 0) return;
-    
-    let agora;
     try {
-        // Trocamos para a TimeAPI (mais rápida e com certificado de segurança mais moderno)
-        const resposta = await fetch('https://timeapi.io/api/Time/current/zone?timeZone=America/Sao_Paulo');
-        const dadosHora = await resposta.json();
-        // A TimeAPI usa o campo com "T" maiúsculo: dateTime
-        agora = new Date(dadosHora.dateTime);
-    } catch (erro) {
-        // Plano B: Usa a hora do PC silenciosamente
-        agora = new Date();
-    }
-    
-    window.listaAgendamentos.forEach(async (a) => {
-        const dt = new Date(a.data_agendada);
+        console.log("⏱️ Vigia: A verificar horários...");
         
-        // Calcula a diferença em minutos do horário atual (da internet) para o horário agendado
-        const difMinutos = (agora - dt) / 1000 / 60;
+        // 1. Busca a agenda diretamente do servidor (funciona em qualquer ecrã)
+        const res = await fetch(`${API}/agenda`);
+        if (!res.ok) return;
         
-        // Se passou de 0 a 15 minutos do horário agendado e ainda não notificamos hoje
-        if (difMinutos >= 0 && difMinutos <= 15 && !agendaNotificada.has(a.id)) {
-            agendaNotificada.add(a.id); // Registra que o alerta já subiu na tela para não ficar repetindo
-            
-            const txtConfirm = `⏰ Atenção! \nO horário do cliente ${a.cliente} (Placa: ${a.placa}) chegou (${dt.toLocaleTimeString().slice(0,5)}).\n\nDeseja enviar uma mensagem no WhatsApp informando que estamos aguardando o veículo?`;
-            
-            if (await showConfirm(txtConfirm)) {
-                const msgZap = `Olá ${a.cliente}! Tudo bem? \n\nAqui é da *SpumaCar*. \n\nPassando para avisar que o seu horário das *${dt.toLocaleTimeString().slice(0,5)}* para o veículo *${a.placa}* acabou de chegar! \n\nEstamos aguardando você aqui. Qualquer imprevisto, é só nos dar um toque!`;
-                enviarZap(a.telefone, msgZap);
-            }
+        const agendamentos = await res.json();
+        if (!agendamentos || agendamentos.length === 0) {
+            console.log("⏱️ Vigia: Nenhum agendamento pendente.");
+            return;
         }
-    });
-}, 30000);
+
+        // 2. Hora exata do computador
+        let agora = new Date();
+
+        agendamentos.forEach(async (a) => {
+            // Converte a data guardada no banco para formato de hora local
+            const dt = new Date(a.data_agendada);
+            
+            // Calcula a diferença em minutos
+            const difMinutos = (agora.getTime() - dt.getTime()) / 1000 / 60;
+            
+            console.log(`⏱️ Cliente: ${a.cliente} | Marcado: ${dt.toLocaleTimeString()} | Faltam/Passaram: ${Math.round(difMinutos)} min`);
+
+            // Regra: O pop-up dispara desde o exato momento marcado (0 min) até 15 minutos de atraso
+            if (difMinutos >= 10 && difMinutos <= 15 && !agendaNotificada.has(a.id)) {
+                console.log(`⏱️ Vigia: DISPARANDO POP-UP para ${a.cliente}!`);
+                agendaNotificada.add(a.id); // Marca como notificado para não repetir
+                
+                const txtConfirm = `⏰ Atenção! \nO horário do cliente ${a.cliente} (Placa: ${a.placa}) chegou (${dt.toLocaleTimeString().slice(0,5)}).\n\nDeseja enviar uma mensagem no WhatsApp a avisar que estamos à espera?`;
+                
+                if (await showConfirm(txtConfirm)) {
+                    // Usa a função do botão manual que criámos antes para garantir que funciona
+                    chamarAgendaZap(a.telefone, a.cliente, dt.toLocaleTimeString().slice(0,5), a.placa);
+                }
+            }
+        });
+    } catch (erro) {
+        console.error("⏱️ Vigia: Erro ->", erro);
+    }
+}, 30000); // O sistema verifica a cada 30 segundos
 async function abrirModalAgenda() {
     // 1. Abre a janela primeiro para dar resposta imediata ao utilizador
     document.getElementById('agendaModal').style.display = 'flex';
