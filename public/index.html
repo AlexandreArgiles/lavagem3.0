@@ -212,6 +212,43 @@
             </div>
         </div>
     </div>
+
+    <div id="editAgendaModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>Editar Agendamento</h2>
+                <button class="close-modal" onclick="fecharEditAgenda()">×</button>
+            </div>
+            <div class="form-grid">
+                <input type="hidden" id="ea-id">
+                <div class="form-group full-width">
+                    <label>Data e Hora</label>
+                    <input type="datetime-local" id="ea-data">
+                </div>
+                <div class="form-group full-width">
+                    <label>Serviço Principal</label>
+                    <select id="ea-servico"></select>
+                </div>
+                <div class="form-group full-width">
+                    <label>Serviço Extra</label>
+                    <input type="text" id="ea-servico-extra" list="lista-servicos">
+                </div>
+                <div class="form-group full-width">
+                    <label>Valor Extra (R$)</label>
+                    <input type="number" id="ea-valor-extra">
+                </div>
+                <div class="form-group full-width">
+                    <label>Observação</label>
+                    <input type="text" id="ea-obs" placeholder="Ex: Deixar chave na portaria...">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="fecharEditAgenda()">Cancelar</button>
+                <button class="btn-primary" onclick="salvarEditAgenda()">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+    
     <script src="script.js"></script>
 </body>
 </html>

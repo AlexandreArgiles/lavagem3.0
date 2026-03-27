@@ -125,6 +125,17 @@ app.get('/api/agenda', checkAuth, (req, res) => {
     });
 });
 
+// Rota para Editar um Agendamento
+app.put('/api/agenda/:id', checkAuth, (req, res) => {
+    const { data_agendada, servico_id, obs, servico_extra, valor_extra } = req.body;
+    
+    db.run("UPDATE agendamentos SET data_agendada = ?, servico_id = ?, obs = ?, servico_extra = ?, valor_extra = ? WHERE id = ?", 
+    [data_agendada, servico_id, obs, servico_extra, valor_extra || 0, req.params.id], (err) => {
+        if(err) return res.status(500).json({error: err.message}); 
+        res.json({success: true});
+    });
+});
+
 // Iniciar Serviço Agendado (Proteção contra serviço deletado/sem preço)
 app.post('/api/agenda', checkAuth, (req, res) => {
     // Agora recebe os extras
@@ -288,6 +299,20 @@ app.get('/api/clientes/:id/detalhes', checkAuth, (req, res) => {
     });
 });
 app.put('/api/clientes/:id', checkAuth, (req, res) => { db.run("UPDATE clientes SET nome=?, telefone=? WHERE id=?", [req.body.nome, req.body.telefone, req.params.id], () => res.json({success:true})); });
+// Rota para Excluir um Cliente
+app.delete('/api/clientes/:id', checkAuth, (req, res) => {
+    const id = req.params.id;
+    db.serialize(() => {
+        // Primeiro apaga os veículos vinculados a este cliente
+        db.run("DELETE FROM veiculos WHERE cliente_id = ?", [id]);
+        
+        // Depois apaga o próprio cliente
+        db.run("DELETE FROM clientes WHERE id = ?", [id], (err) => {
+            if(err) return res.status(500).json({error: err.message});
+            res.json({success: true});
+        });
+    });
+});
 app.post('/api/veiculos', checkAuth, (req, res) => { db.run("INSERT INTO veiculos (placa, modelo, cliente_id) VALUES (?,?,?)", [req.body.placa, req.body.modelo, req.body.cliente_id], () => res.json({success:true})); });
 app.delete('/api/veiculos/:id', checkAuth, (req, res) => { db.run("DELETE FROM veiculos WHERE id=?", [req.params.id], () => res.json({success:true})); });
 

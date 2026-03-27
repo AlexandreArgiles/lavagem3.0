@@ -5,6 +5,16 @@ app.disableHardwareAcceleration();
 
 require('./server.js');
 
+const { app, BrowserWindow } = require('electron');
+const path = require('path');
+
+// Força o Windows a chamar o programa de "SpumaCar" nas notificações
+app.setAppUserModelId("SpumaCar");
+
+app.disableHardwareAcceleration();
+
+require('./server.js');
+
 let mainWindow;
 
 function createWindow() {

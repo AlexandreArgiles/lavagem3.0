@@ -66,7 +66,7 @@ function navTo(id) {
     }
 }
 
-// ================== PÁTIO E LAVAGEM (OBS ADICIONADO) ==================
+// ================== PÁTIO E LAVAGEM ==================
 async function loadPatio(){
     const r1=await fetch(`${API}/patio/andamento`); const a=await r1.json();
     const d=document.getElementById('lista-andamento'); d.innerHTML='';
@@ -103,21 +103,18 @@ async function loadPatio(){
 }
 async function concluirLavagem(id, n, t, p, v) {
     if (!await showConfirm(`Concluir veículo ${p}?`)) return;
-    
     const r = await fetch(`${API}/concluir-servico/${id}`, {method: 'PUT'});
-    
     if (r.ok) {
         if (await showConfirm('Avisar cliente pelo WhatsApp?')) {
-            // Nova mensagem autêntica da SpumaCar
-            const mensagem = `Olá ${n}! \n\nBoas notícias: seu veículo (${p}) acabou de receber aquele talento e já está brilhando aqui na *SpumaCar*! \n\nO valor do serviço ficou em *R$ ${fmt(v)}*.\n\nJá pode vir buscar seu veículo! Qualquer dúvida, estamos à disposição. Um abraço da equipe SpumaCar! `;
-            
+            const mensagem = `Olá ${n}! \n\nBoas notícias: o seu veículo (${p}) acabou de receber aquele talento e já está a brilhar aqui na *SpumaCar*! \n\nO valor do serviço ficou em *R$ ${fmt(v)}*.\n\nJá pode vir buscar o seu veículo! Qualquer dúvida, estamos à disposição. Um abraço da equipa SpumaCar! `;
             enviarZap(t, mensagem);
         }
         loadPatio();
     } else {
         showAlert('Erro ao concluir');
     }
-}function enviarZap(tel, msg) { if(!tel) { showAlert('Cliente sem telefone'); return; } let num = tel.replace(/\D/g, ''); if(num.length === 10 || num.length === 11) num = '55' + num; window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank'); }
+}
+function enviarZap(tel, msg) { if(!tel) { showAlert('Cliente sem telefone'); return; } let num = tel.replace(/\D/g, ''); if(num.length === 10 || num.length === 11) num = '55' + num; window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank'); }
 
 let sCache=[], cCache=[];
 // ================== PREPARAÇÃO DA TELA DE NOVO SERVIÇO ==================
@@ -145,23 +142,17 @@ async function prepLav() {
             sCache.forEach(s => dlServicos.innerHTML += `<option value="${s.nome}">`);
         }
     } catch (erro) { console.error("Erro ao carregar listas:", erro); }
-}
-ffill('reg-servico');fill('reg-func');fill('agd-servico');
-    
-    // Alimenta o Datalist de Serviços Extras
-    const dlServicos = document.getElementById('lista-servicos');
-    if(dlServicos) {
-        dlServicos.innerHTML = '';
-        sCache.forEach(s => dlServicos.innerHTML += `<option value="${s.nome}">`);
-    }
     resetLav();
+}
+
 function resetLav(){
-    ['reg-placa','reg-cliente','reg-tel','reg-modelo','reg-valor','reg-obs', 'reg-servico-extra', 'reg-valor-extra'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('reg-placa').classList.remove('hidden');
-    document.getElementById('reg-placa-select').classList.add('hidden');
-    document.getElementById('reg-modelo').disabled=false;
-    document.getElementById('reg-cliente').disabled=false;
-}function atualizarPreco(){const i=sCache.find(x=>x.id==document.getElementById('reg-servico').value);if(i)document.getElementById('reg-valor').value=i.preco}
+    ['reg-placa','reg-cliente','reg-tel','reg-modelo','reg-valor','reg-obs', 'reg-servico-extra', 'reg-valor-extra'].forEach(id=> { if(document.getElementById(id)) document.getElementById(id).value=''; });
+    if(document.getElementById('reg-placa')) document.getElementById('reg-placa').classList.remove('hidden');
+    if(document.getElementById('reg-placa-select')) document.getElementById('reg-placa-select').classList.add('hidden');
+    if(document.getElementById('reg-modelo')) document.getElementById('reg-modelo').disabled=false;
+    if(document.getElementById('reg-cliente')) document.getElementById('reg-cliente').disabled=false;
+}
+function atualizarPreco(){const i=sCache.find(x=>x.id==document.getElementById('reg-servico').value);if(i)document.getElementById('reg-valor').value=i.preco}
 async function buscarPlaca(){const p=document.getElementById('reg-placa').value.toUpperCase();if(p.length<5)return;const r=await fetch(`${API}/buscar-placa/${p}`);const d=await r.json();if(d){document.getElementById('reg-modelo').value=d.modelo||'';document.getElementById('reg-cliente').value=d.nome;document.getElementById('reg-tel').value=d.telefone||'';document.getElementById('reg-cliente').disabled=true;document.getElementById('reg-modelo').disabled=true}else{document.getElementById('reg-cliente').disabled=false;document.getElementById('reg-modelo').disabled=false}}
 async function buscarClienteNome(){
     const inputs=['reg-cliente','agd-cli'];
@@ -192,7 +183,6 @@ async function buscarClienteNome(){
         sel.veiculos.forEach(v=>sp.innerHTML+=`<option value="${v.placa}" data-m="${v.modelo}">${v.placa} - ${v.modelo||''}</option>`);
         sp.innerHTML+='<option value="NOVO">Novo Carro</option>';
     } else if (act==='agd-cli') {
-        // AGORA PREENCHE A AGENDA TAMBÉM!
         document.getElementById('agd-tel').value=sel.telefone||'';
         const ip=document.getElementById('agd-placa');
         const sp=document.getElementById('agd-placa-select');
@@ -223,7 +213,7 @@ function selCarro(){const s=document.getElementById('reg-placa-select');const v=
 async function finalizarLavagem(){
     let p=document.getElementById('reg-placa').value.toUpperCase(); const s=document.getElementById('reg-placa-select');
     if(!s.classList.contains('hidden')&&s.value&&s.value!=='NOVO') p=s.value;
-const pl={
+    const pl={
         placa:p,modelo:document.getElementById('reg-modelo').value,nome:document.getElementById('reg-cliente').value,
         telefone:document.getElementById('reg-tel').value,servico_id:document.getElementById('reg-servico').value,
         funcionario_id:document.getElementById('reg-func').value,valor:document.getElementById('reg-valor').value,
@@ -235,58 +225,80 @@ const pl={
     if(r.ok){showAlert('Veículo registrado no pátio!');navTo('patio')}else showAlert('Erro ao registrar entrada')
 }
 
-// ================== AGENDA (OBS ADICIONADO) ==================
-// ================== AGENDA & AVISOS AUTOMÁTICOS ==================
+// ================== AGENDA (CORRIGIDA E UNIFICADA) ==================
 window.listaAgendamentos = [];
+const agendaNotificada = new Set();
 
-// Função específica para o botão manual da agenda
+// Botão de chamar manual
 function chamarAgendaZap(telefone, cliente, hora, placa) {
-    const msg = `Olá ${cliente}! Tudo bem? \n\nAqui é da *SpumaCar*. \nPassando para lembrar do seu horário das *${hora}* para o veículo *${placa}*. \n\nAguardamos seu retorno!`;
+    const msg = `Olá ${cliente}! Tudo bem? \n\nAqui é da *SpumaCar*. \nPassando para lembrar do seu horário das *${hora}* para o veículo *${placa}*. \n\nEstamos à sua espera!`;
     enviarZap(telefone, msg);
 }
 
-async function loadAgenda(){
-    const r=await fetch(`${API}/agenda`);
-    const d=await r.json();
-    window.listaAgendamentos = d; // Guarda na memória para o verificador de tempo
-    const v=document.getElementById('lista-agenda');
-    v.innerHTML='';
-    if(!d.length) v.innerHTML='<p style="color:#888">Vazio</p>';
-    
-d.forEach(a=>{
-        const dt=new Date(a.data_agendada);
-        const servicoExtraHtml = a.servico_extra ? `<p style="color:#0369a1; margin: 3px 0;">➕ ${a.servico_extra} (R$ ${a.valor_extra || 0})</p>` : '';
-        const horaStr = dt.toLocaleTimeString().slice(0,5);
+// Carregar Lista
+async function loadAgenda() {
+    try {
+        const r = await fetch(`${API}/agenda?t=${Date.now()}`);
+        const d = await r.json();
+        
+        window.listaAgendamentos = d;
+        const v = document.getElementById('lista-agenda');
+        v.innerHTML = '';
 
-        v.innerHTML+=`<div class="patio-card" style="border-color:#bbf7d0">
-            <div class="patio-header">
-                <span class="patio-placa" style="background:#dcfce7;color:#15803d">${horaStr} - ${dt.toLocaleDateString()}</span>
-                <button class="btn-action btn-delete" style="padding: 5px 10px; font-weight:bold; border-radius:6px;" onclick="cancelarAgenda(${a.id})">🗑️ Cancelar</button>
-            </div>
-            <div class="patio-body">
-                <p><strong>${a.placa}</strong> (${a.modelo||''})</p>
-                <p>👤 ${a.cliente}</p>
-                <p>🛠️ ${a.servico || 'Sem serviço definido'}</p>
-                ${servicoExtraHtml}
-                <p style="font-style:italic;font-size:0.8rem;color:#d97706">${a.obs||''}</p>
-            </div>
-            
-            <div style="display:flex; gap:10px; margin-top:15px; flex-wrap: wrap;">
-                <button class="btn-primary" style="flex:2; background:#15803d; min-width: 150px; padding: 10px 0;" onclick="iniciarServicoAgendado(${a.id},'${a.placa}')">▶️ Receber Veículo</button>
-                <button style="flex:1; background:#25D366; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; min-width: 100px; padding: 10px 0;" onclick="chamarAgendaZap('${a.telefone}', '${a.cliente}', '${horaStr}', '${a.placa}')">📱 Chamar</button>
-            </div>
-        </div>`;
-    });}
+        if (!d || d.length === 0) {
+            v.innerHTML = '<p style="color:#888; text-align:center; width:100%; padding: 20px;">Nenhum agendamento pendente.</p>';
+            return;
+        }
 
-async function salvarAgendamento(){
-    // Descobre se a placa foi digitada ou escolhida na lista
+        d.forEach(a => {
+            const dt = new Date(a.data_agendada);
+            const servicoExtraHtml = a.servico_extra ? `<p style="color:#0369a1; margin: 3px 0;">➕ ${a.servico_extra} (R$ ${a.valor_extra || 0})</p>` : '';
+
+            // Proteções contra erros de aspas no HTML
+            const escObs = a.obs ? String(a.obs).replace(/'/g, "\\'") : '';
+            const escServExtra = a.servico_extra ? String(a.servico_extra).replace(/'/g, "\\'") : '';
+            const escCliente = a.cliente ? String(a.cliente).replace(/'/g, "\\'") : '';
+            const horaStr = dt.toLocaleTimeString().slice(0,5);
+
+            v.innerHTML += `<div class="patio-card" style="border-color:#bbf7d0">
+                <div class="patio-header">
+                    <span class="patio-placa" style="background:#dcfce7;color:#15803d">${horaStr} - ${dt.toLocaleDateString()}</span>
+                    
+                    <div style="display: flex; gap: 5px;">
+                        <button class="btn-action" style="padding: 5px 10px; font-weight:bold; border-radius:6px; background:#f59e0b; color:white; border:none; cursor:pointer;" onclick="abrirEditAgenda(${a.id}, '${a.data_agendada}', ${a.servico_id || 'null'}, '${escObs}', '${escServExtra}', ${a.valor_extra || 0})">✏️ Editar</button>
+                        <button class="btn-action btn-delete" style="padding: 5px 10px; font-weight:bold; border-radius:6px;" onclick="cancelarAgenda(${a.id})">🗑️ Cancelar</button>
+                    </div>
+                </div>
+                
+                <div class="patio-body">
+                    <p><strong>${a.placa}</strong> (${a.modelo || ''})</p>
+                    <p>👤 ${a.cliente}</p>
+                    <p>🛠️ ${a.servico || 'Sem serviço definido'}</p>
+                    ${servicoExtraHtml}
+                    <p style="font-style:italic;font-size:0.8rem;color:#d97706">${a.obs || ''}</p>
+                </div>
+                
+                <div style="display:flex; gap:10px; margin-top:15px; flex-wrap: wrap;">
+                    <button class="btn-primary" style="flex:2; background:#15803d; min-width: 150px; padding: 10px 0;" onclick="iniciarServicoAgendado(${a.id},'${a.placa}')">▶️ Receber Veículo</button>
+                    <button style="flex:1; background:#25D366; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; min-width: 100px; padding: 10px 0;" onclick="chamarAgendaZap('${a.telefone}', '${escCliente}', '${horaStr}', '${a.placa}')">📱 Chamar</button>
+                </div>
+            </div>`;
+        });
+    } catch (erro) {
+        console.error("Erro ao carregar a agenda:", erro);
+    }
+}
+
+// Salvar Novo Agendamento (Versão Única)
+async function salvarAgendamento() {
     let placaFinal = document.getElementById('agd-placa').value.toUpperCase();
     const selectPlaca = document.getElementById('agd-placa-select');
-    if(selectPlaca && !selectPlaca.classList.contains('hidden') && selectPlaca.value && selectPlaca.value !== 'NOVO'){
+    
+    if (selectPlaca && !selectPlaca.classList.contains('hidden') && selectPlaca.value && selectPlaca.value !== 'NOVO') {
         placaFinal = selectPlaca.value;
     }
 
-    const p={
+    const p = {
         data_agendada: document.getElementById('agd-data').value,
         nome: document.getElementById('agd-cli').value,
         telefone: document.getElementById('agd-tel').value,
@@ -297,78 +309,80 @@ async function salvarAgendamento(){
         servico_extra: document.getElementById('agd-servico-extra').value,
         valor_extra: document.getElementById('agd-valor-extra').value
     };
-    
-    if(!p.data_agendada || !p.nome || !p.placa || !p.servico_id){ 
-        showAlert('Preencha os dados obrigatórios (Data, Cliente, Placa e Serviço)!'); 
-        return; 
-    } 
-    
-    const r=await fetch(`${API}/agenda`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
-    if(r.ok){
-        showAlert('Agendado com sucesso!');
-        fecharAgenda();
-        loadAgenda();
-    } else {
-        showAlert('Erro ao agendar');
+
+    if (!p.data_agendada || !p.nome || !p.placa || !p.servico_id) {
+        showAlert('Preencha os dados obrigatórios (Data, Cliente, Placa e Serviço)!');
+        return;
+    }
+
+    try {
+        const r = await fetch(`${API}/agenda`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(p)
+        });
+
+        if (r.ok) {
+            showAlert('Agendado com sucesso!');
+            fecharAgenda();
+            await loadAgenda(); 
+        } else {
+            showAlert('Erro ao agendar no servidor.');
+        }
+    } catch (e) {
+        showAlert('Erro de ligação! O agendamento falhou.');
     }
 }
 
-// ⏰ VIGIA AUTOMÁTICO DE HORÁRIOS (Versão Definitiva com Diagnóstico)
-const agendaNotificada = new Set();
-
+// Vigia Automático (Lembrete 10 mins + Notificação do Windows)
 setInterval(async () => {
     try {
-        console.log("⏱️ Vigia: A verificar horários...");
-        
-        // 1. Busca a agenda diretamente do servidor (funciona em qualquer ecrã)
         const res = await fetch(`${API}/agenda`);
         if (!res.ok) return;
         
         const agendamentos = await res.json();
-        if (!agendamentos || agendamentos.length === 0) {
-            console.log("⏱️ Vigia: Nenhum agendamento pendente.");
-            return;
-        }
+        if (!agendamentos || agendamentos.length === 0) return;
 
-        // 2. Hora exata do computador
         let agora = new Date();
 
         agendamentos.forEach(async (a) => {
-            // Converte a data guardada no banco para formato de hora local
             const dt = new Date(a.data_agendada);
-            
-            // Calcula a diferença em minutos
             const difMinutos = (agora.getTime() - dt.getTime()) / 1000 / 60;
             
-            console.log(`⏱️ Cliente: ${a.cliente} | Marcado: ${dt.toLocaleTimeString()} | Faltam/Passaram: ${Math.round(difMinutos)} min`);
-
-            // Regra: O pop-up dispara desde o exato momento marcado (0 min) até 15 minutos de atraso
-            if (difMinutos >= 10 && difMinutos <= 15 && !agendaNotificada.has(a.id)) {
-                console.log(`⏱️ Vigia: DISPARANDO POP-UP para ${a.cliente}!`);
-                agendaNotificada.add(a.id); // Marca como notificado para não repetir
+            if (difMinutos >= -10 && difMinutos <= 15 && !agendaNotificada.has(a.id)) {
+                agendaNotificada.add(a.id);
                 
-                const txtConfirm = `⏰ Atenção! \nO horário do cliente ${a.cliente} (Placa: ${a.placa}) chegou (${dt.toLocaleTimeString().slice(0,5)}).\n\nDeseja enviar uma mensagem no WhatsApp a avisar que estamos à espera?`;
+                const horaStr = dt.toLocaleTimeString().slice(0,5);
+                
+                // 1. DISPARA A NOTIFICAÇÃO NATIVA DO WINDOWS (Para quando o app está minimizado)
+                if (Notification.permission === "granted") {
+                    new Notification("⏰ Lembrete SpumaCar", {
+                        body: `O horário de ${a.cliente} (${a.placa}) é às ${horaStr}! Abra o sistema para confirmar.`,
+                        icon: "logo.png"
+                    });
+                }
+
+                // 2. MOSTRA O POP-UP NA TELA (Para você clicar e enviar o zap)
+                const txtConfirm = `⏰ Lembrete Automático! \nFaltam cerca de 10 minutos para o horário de ${a.cliente} (Placa: ${a.placa}) - marcado para as ${horaStr}.\n\nDeseja enviar um lembrete no WhatsApp?`;
                 
                 if (await showConfirm(txtConfirm)) {
-                    // Usa a função do botão manual que criámos antes para garantir que funciona
-                    chamarAgendaZap(a.telefone, a.cliente, dt.toLocaleTimeString().slice(0,5), a.placa);
+                    const msgZap = `Olá ${a.cliente}! Tudo bem?\n\nAqui é da *SpumaCar*.\n\nPassando para lembrar que o seu horário para o veículo *${a.placa}* é daqui a pouco, às *${horaStr}*.\n\nEstamos à sua espera! Qualquer imprevisto, é só avisar.`;
+                    enviarZap(a.telefone, msgZap);
                 }
             }
         });
     } catch (erro) {
-        console.error("⏱️ Vigia: Erro ->", erro);
+        console.error("Erro no vigia da agenda:", erro);
     }
-}, 30000); // O sistema verifica a cada 30 segundos
+}, 30000);
+
+// Ações Básicas da Agenda
 async function abrirModalAgenda() {
-    // 1. Abre a janela primeiro para dar resposta imediata ao utilizador
     document.getElementById('agendaModal').style.display = 'flex';
-    
     try {
-        // 2. Vai buscar a lista de serviços atualizada ao backend
         const sR = await fetch(`${API}/servicos`);
         sCache = await sR.json();
         
-        // 3. Preenche o menu suspenso (dropdown) do Serviço Principal
         const selectServico = document.getElementById('agd-servico');
         if (selectServico) {
             selectServico.innerHTML = '<option value="">Selecione um serviço...</option>';
@@ -376,21 +390,14 @@ async function abrirModalAgenda() {
                 selectServico.innerHTML += `<option value="${s.id}">${s.nome} (R$ ${s.preco})</option>`;
             });
         }
-
-        // 4. Preenche as sugestões do Serviço Extra
         const dlServicos = document.getElementById('lista-servicos');
         if (dlServicos) {
             dlServicos.innerHTML = '';
-            sCache.forEach(s => {
-                dlServicos.innerHTML += `<option value="${s.nome}">`;
-            });
+            sCache.forEach(s => { dlServicos.innerHTML += `<option value="${s.nome}">`; });
         }
     } catch (erro) {
         console.error("Erro ao carregar os serviços na agenda:", erro);
-        showAlert("Não foi possível carregar os serviços. Verifique a sua ligação.");
     }
-    
-    // 5. Limpa todos os campos para não trazer lixo do agendamento anterior
     ['agd-data', 'agd-cli', 'agd-tel', 'agd-placa', 'agd-modelo', 'agd-obs', 'agd-servico-extra', 'agd-valor-extra'].forEach(id => {
         const el = document.getElementById(id);
         if(el) el.value = '';
@@ -399,40 +406,68 @@ async function abrirModalAgenda() {
     const spAgd = document.getElementById('agd-placa-select');
     if(spAgd) spAgd.classList.add('hidden');
     document.getElementById('agd-modelo').disabled = false;
-    // Assegura que o menu selecionado volta à opção inicial (vazia)
     const resetServico = document.getElementById('agd-servico');
     if(resetServico) resetServico.value = '';
 }
 function fecharAgenda(){document.getElementById('agendaModal').style.display='none'}
-async function salvarAgendamento(){
-    const p={
-        data_agendada: document.getElementById('agd-data').value,
-        nome: document.getElementById('agd-cli').value,
-        telefone: document.getElementById('agd-tel').value,
-        placa: document.getElementById('agd-placa').value.toUpperCase(),
-        modelo: document.getElementById('agd-modelo').value,
-        servico_id: document.getElementById('agd-servico').value,
-        obs: document.getElementById('agd-obs').value,
-        servico_extra: document.getElementById('agd-servico-extra').value,
-        valor_extra: document.getElementById('agd-valor-extra').value
-    };
-    
-    if(!p.data_agendada || !p.nome || !p.placa || !p.servico_id){ 
-        showAlert('Preencha os dados obrigatórios (Data, Cliente, Placa e Serviço)!'); 
-        return; 
-    } 
-    
-    const r=await fetch(`${API}/agenda`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
-    if(r.ok){
-        showAlert('Agendado com sucesso!');
-        fecharAgenda();
-        loadAgenda();
-    } else {
-        showAlert('Erro ao agendar');
-    }
-}
 async function iniciarServicoAgendado(id,p){if(!await showConfirm(`Receber veículo ${p} no pátio?`))return;const r=await fetch(`${API}/agenda/${id}/iniciar`,{method:'POST'});if(r.ok){showAlert('Veículo movido para o Pátio!');navTo('patio')}else showAlert('Erro ao iniciar')}
 async function cancelarAgenda(id){if(!await showConfirm('Cancelar este agendamento?'))return;await fetch(`${API}/agenda/${id}`,{method:'DELETE'});loadAgenda()}
+
+// ================== EDIÇÃO DA AGENDA ==================
+async function abrirEditAgenda(id, data_agendada, servico_id, obs, serv_extra, val_extra) {
+    document.getElementById('ea-id').value = id;
+    document.getElementById('ea-data').value = data_agendada;
+    document.getElementById('ea-obs').value = obs !== 'undefined' && obs ? obs : '';
+    document.getElementById('ea-servico-extra').value = serv_extra !== 'undefined' && serv_extra ? serv_extra : '';
+    document.getElementById('ea-valor-extra').value = val_extra;
+    
+    if(!sCache || sCache.length === 0) {
+        const sR = await fetch(`${API}/servicos`);
+        sCache = await sR.json();
+    }
+    
+    const sel = document.getElementById('ea-servico');
+    sel.innerHTML = '<option value="">Sem serviço definido</option>';
+    sCache.forEach(s => {
+        sel.innerHTML += `<option value="${s.id}" ${s.id == servico_id ? 'selected' : ''}>${s.nome} (R$ ${s.preco})</option>`;
+    });
+    
+    document.getElementById('editAgendaModal').style.display = 'flex';
+}
+
+function fecharEditAgenda() {
+    document.getElementById('editAgendaModal').style.display = 'none';
+}
+
+async function salvarEditAgenda() {
+    const id = document.getElementById('ea-id').value;
+    const body = {
+        data_agendada: document.getElementById('ea-data').value,
+        servico_id: document.getElementById('ea-servico').value,
+        obs: document.getElementById('ea-obs').value,
+        servico_extra: document.getElementById('ea-servico-extra').value,
+        valor_extra: document.getElementById('ea-valor-extra').value
+    };
+    
+    if(!body.data_agendada) {
+        showAlert('A data e hora são obrigatórias!');
+        return;
+    }
+
+    const r = await fetch(`${API}/agenda/${id}`, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body)
+    });
+    
+    if(r.ok) {
+        showAlert('Agendamento atualizado com sucesso!');
+        fecharEditAgenda();
+        loadAgenda();
+    } else {
+        showAlert('Erro ao atualizar o agendamento.');
+    }
+}
 
 // ================== RESTANTE (RH, DASH, CLIENTES, EXTRATO, MODAIS) ==================
 function toggleCalcRH() {
@@ -493,7 +528,7 @@ async function delRH(id) { if(!await showConfirm('Excluir lançamento de RH?')) 
 
 async function loadUsuarios() { const res = await fetch(`${API}/usuarios`); const data = await res.json(); const tb = document.querySelector('#tabela-usuarios tbody'); tb.innerHTML = ''; data.forEach(u => { tb.innerHTML += `<tr><td>${u.login}</td><td>${u.perfil}</td><td><button class="btn-action btn-delete" onclick="delUsuario(${u.id})">X</button></td></tr>`; }); }
 async function salvarUsuario() { const login = document.getElementById('usu-login').value; const senha = document.getElementById('usu-senha').value; const perfil = document.getElementById('usu-perfil').value; if(!login || !senha) { showAlert('Preencha login e senha'); return; } const res = await fetch(`${API}/usuarios`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({login, senha, perfil}) }); if(res.ok) { showAlert('Criado!'); document.getElementById('usu-login').value=''; document.getElementById('usu-senha').value=''; loadUsuarios(); } else showAlert('Erro ao criar'); }
-async function delUsuario(id) { if(!await showConfirm('Excluir usuário?')) return; const res = await fetch(`${API}/usuarios/${id}`, {method:'DELETE'}); if(res.ok) loadUsuarios(); else showAlert('Erro'); }
+async function delUsuario(id) { if(!await showConfirm('Excluir utilizador?')) return; const res = await fetch(`${API}/usuarios/${id}`, {method:'DELETE'}); if(res.ok) loadUsuarios(); else showAlert('Erro'); }
 
 async function loadDash() { const res = await fetch(`${API}/dashboard`); if(res.status==401) logout(); const d = await res.json(); document.getElementById('dash-count').innerText = d.hoje.qtd; document.getElementById('dash-patio').innerText = d.em_andamento; document.getElementById('dash-fat-hoje').innerText = fmt(d.hoje.total); if(userRole === 'admin') { document.getElementById('dash-mes-fat').innerText = fmt(d.mes.faturamento); document.getElementById('dash-mes-custo').innerText = fmt(d.mes.custos); document.getElementById('dash-mes-lucro').innerText = fmt(d.mes.lucro); } loadGraficos(); }
 async function restaurarBackup(input) { if (!input.files || !input.files[0]) return; if (!await showConfirm('ATENÇÃO: Substituir TODOS os dados?')) return; const formData = new FormData(); formData.append('backupFile', input.files[0]); const res = await fetch(`${API}/restore`, { method: 'POST', body: formData }); if (res.ok) { showAlert('Restaurado com sucesso!'); setTimeout(() => location.reload(), 1500); } else showAlert('Erro na restauração.'); }
@@ -510,8 +545,54 @@ async function impDia(){const d=document.getElementById('rdd').value;if(!d)retur
 async function impMes(){const m=document.getElementById('rdm').value;if(!m)return;const r=await fetch(`${API}/relatorios/fechamento-mes?mes=${m}`);const j=await r.json();let h=`<h2>BALANÇO</h2><p>${m}</p><div class="linha"></div><div class="item"><span>Faturamento:</span><span>${fmt(j.faturamento)}</span></div><div class="item"><span>Custos:</span><span>-${fmt(j.custo_produtos)}</span></div><div class="item"><span>Despesas:</span><span>-${fmt(j.total_despesas)}</span></div><div class="linha"></div><div class="total">LUCRO: ${fmt(j.lucro_liquido)}</div>`;impJanela(h)}
 async function loadGraficos(){const r=await fetch(`${API}/dashboard/graficos`);const d=await r.json();const b=document.getElementById('grafico-semana');b.innerHTML='';const m=Math.max(...d.faturamento_semanal.map(x=>x.total),10);d.faturamento_semanal.forEach(x=>b.innerHTML+=`<div class="chart-bar" style="height:${(x.total/m)*100}%"><span>${Math.round(x.total)}</span><div class="chart-label">${x.data.split('-').slice(1).reverse().join('/')}</div></div>`);if(!d.faturamento_semanal.length)b.innerHTML='<p style="margin:auto;color:#999">Sem dados</p>';const l=document.getElementById('grafico-pgto');l.innerHTML='';const t=d.formas_pagamento.reduce((a,c)=>a+c.qtd,0);d.formas_pagamento.forEach(p=>l.innerHTML+=`<div class="list-chart-item"><span style="font-size:0.8rem;width:70px">${p.forma_pagamento}</span><div class="list-bar-bg"><div class="list-bar-fill" style="width:${(p.qtd/t)*100}%"></div></div><span style="font-weight:bold;font-size:0.9rem">${p.qtd}</span></div>`)}
 
-async function loadCli(){const r=await fetch(`${API}/clientes`);const d=await r.json();const t=document.querySelector('#tabela-clientes tbody');t.innerHTML='';d.forEach(c=>t.innerHTML+=`<tr><td>${c.nome}</td><td>${c.telefone||''}</td><td>${c.veiculos_info||'-'}</td><td><button class="btn-action btn-whatsapp" onclick="enviarZap('${c.telefone}','Olá')">📱</button><button class="btn-action btn-edit" onclick="modalCli(${c.id})">📋</button></td></tr>`)}
-function abrirNovoCli(){document.getElementById('newClientModal').style.display='flex';document.getElementById('ncn').value=''}
+// ================== GESTÃO DE CLIENTES ==================
+async function loadCli() {
+    const r = await fetch(`${API}/clientes`);
+    const d = await r.json();
+    const t = document.querySelector('#tabela-clientes tbody');
+    t.innerHTML = '';
+    
+    d.forEach(c => {
+        // Proteção caso o nome tenha aspas (ex: D'Artagnan)
+        const escNome = c.nome ? c.nome.replace(/'/g, "\\'") : '';
+        
+        t.innerHTML += `<tr>
+            <td>${c.nome}</td>
+            <td>${c.telefone || ''}</td>
+            <td>${c.veiculos_info || '-'}</td>
+            <td>
+                <div style="display: flex; gap: 5px;">
+                    <button class="btn-action btn-whatsapp" onclick="enviarZap('${c.telefone}','Olá')">📱</button>
+                    <button class="btn-action btn-edit" onclick="modalCli(${c.id})">📋</button>
+                    <button class="btn-action btn-delete" onclick="delCli(${c.id}, '${escNome}')">🗑️</button>
+                </div>
+            </td>
+        </tr>`;
+    });
+}
+
+/// Rota para Excluir um Cliente (Forçada - Limpa dependências)
+app.delete('/api/clientes/:id', checkAuth, (req, res) => {
+    const id = req.params.id;
+    
+    db.serialize(() => {
+        // 1. Remove qualquer histórico de lavagens ou pendências no pátio deste cliente
+        db.run("DELETE FROM transacoes WHERE cliente_id = ?", [id]);
+        
+        // 2. Remove agendamentos futuros
+        db.run("DELETE FROM agendamentos WHERE cliente_id = ?", [id]);
+        
+        // 3. Remove os veículos associados
+        db.run("DELETE FROM veiculos WHERE cliente_id = ?", [id]);
+        
+        // 4. Finalmente, apaga o cliente
+        db.run("DELETE FROM clientes WHERE id = ?", [id], (err) => {
+            if(err) return res.status(500).json({error: err.message});
+            res.json({success: true});
+        });
+    });
+});
+}function abrirNovoCli(){document.getElementById('newClientModal').style.display='flex';document.getElementById('ncn').value=''}
 function fecharNewClientModal(){document.getElementById('newClientModal').style.display='none'}
 async function salvarNovoCli(){const n=document.getElementById('ncn').value;const t=document.getElementById('nct').value;if(n){await fetch(`${API}/clientes`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome:n,telefone:t})});fecharNewClientModal();loadCli()}}
 async function modalCli(id){const m=document.getElementById('clientModal');const b=document.getElementById('clientModalBody');m.style.display='flex';b.innerHTML='...';const r=await fetch(`${API}/clientes/${id}/detalhes`);const c=await r.json();let l='';c.veiculos.forEach(v=>l+=`<li>${v.placa} - ${v.modelo||''}<button onclick="delV(${v.id},${c.id})">X</button></li>`);b.innerHTML=`<input id="ecn" value="${c.nome}"><input id="ect" value="${c.telefone||''}"><button onclick="saveCli(${c.id})">Salvar</button><hr><input id="np" placeholder="Placa"><input id="nm" placeholder="Mod"><button onclick="addV(${c.id})">+</button><ul>${l}</ul>`}
@@ -595,7 +676,7 @@ async function loadServ() {
 async function salvarServ(){const n=document.getElementById('sn').value;const p=document.getElementById('sp').value;const c=document.getElementById('sc').value;if(n){await fetch(`${API}/servicos`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome:n,preco:p,custo:c})});loadServ();document.getElementById('sn').value=''}}
 async function loadFunc(){const r=await fetch(`${API}/funcionarios`);const d=await r.json();const t=document.querySelector('#tabela-funcs tbody');t.innerHTML='';d.forEach(x=>t.innerHTML+=`<tr><td>${x.nome}</td><td><button onclick="delItem('funcionarios',${x.id},loadFunc)">X</button></td></tr>`)}
 async function salvarFunc(){const n=document.getElementById('fn').value;if(n){await fetch(`${API}/funcionarios`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome:n})});loadFunc();document.getElementById('fn').value=''}}
-async function delItem(r,i,cb){if(await showConfirm('Apagar registro?')){await fetch(`${API}/${r}/${i}`,{method:'DELETE'});cb()}}
+async function delItem(r,i,cb){if(await showConfirm('Apagar registo?')){await fetch(`${API}/${r}/${i}`,{method:'DELETE'});cb()}}
 
 let ec={};
 function abrirModal(t,i,...a){const m=document.getElementById('editModal');const b=document.getElementById('modalBody');ec={t,i};m.style.display='flex';if(t==='servico')b.innerHTML=`<label>Nome</label><input id="en" value="${a[0]}"><label>Preço</label><input id="ep" value="${a[1]}"><label>Custo</label><input id="ec" value="${a[2]}">`;if(t==='funcionario')b.innerHTML=`<label>Nome</label><input id="en" value="${a[0]}">`;if(t==='despesa')b.innerHTML=`<label>Desc</label><input id="ed" value="${a[0]}"><label>Valor</label><input id="ev" value="${a[1]}"><label>Cat</label><select id="ec"><option>Fixa</option><option>Variável</option><option>Pessoal</option></select>`;if(t==='transacao')b.innerHTML=`<label>Valor</label><input id="ev" value="${a[1]}"><label>Pgto</label><select id="ep"><option>Dinheiro</option><option>PIX</option><option>Cartão</option></select>`;}
@@ -612,16 +693,22 @@ async function carregarIpRede() {
     }
 }
 
+// INICIALIZAÇÃO DA PÁGINA COM PEDIDO DE NOTIFICAÇÃO DO WINDOWS
 document.addEventListener('DOMContentLoaded', () => { 
     loadDash(); 
     carregarIpRede(); 
+    
+    // Pede permissão ao Windows para mostrar notificações caso ainda não tenha
+    if (Notification.permission !== "denied" && Notification.permission !== "granted") {
+        Notification.requestPermission();
+    }
 });
-// ================== CONTROLE DO MENU MOBILE ==================
+
+// ================== CONTROLO DO MENU MOBILE ==================
 function toggleMenu() {
     document.querySelector('.sidebar').classList.toggle('show');
 }
 
-// Garante que o menu vai fechar automaticamente ao clicar em alguma opção
 document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         if(window.innerWidth <= 768) {
@@ -629,6 +716,7 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
         }
     });
 });
+
 // ================== EDIÇÃO NO PÁTIO ==================
 async function abrirEditPatio(id, servico_id, valor, obs, serv_extra, val_extra) {
     document.getElementById('ep-id').value = id;
@@ -637,13 +725,11 @@ async function abrirEditPatio(id, servico_id, valor, obs, serv_extra, val_extra)
     document.getElementById('ep-servico-extra').value = serv_extra !== 'undefined' ? serv_extra : '';
     document.getElementById('ep-valor-extra').value = val_extra;
     
-    // Garante que a lista de serviços foi carregada
     if(sCache.length === 0) {
         const sR = await fetch(`${API}/servicos`);
         sCache = await sR.json();
     }
     
-    // Alimenta o datalist caso ainda não tenha sido
     const dlServicos = document.getElementById('lista-servicos');
     if(dlServicos && dlServicos.innerHTML === '') {
         sCache.forEach(s => dlServicos.innerHTML += `<option value="${s.nome}">`);
@@ -692,7 +778,7 @@ async function salvarEditPatio() {
 }
 // ================== CANCELAMENTO NO PÁTIO ==================
 async function cancelarPatio(id, placa) {
-    if(!await showConfirm(`Tem certeza que deseja CANCELAR a entrada do veículo ${placa}? O registro será apagado do sistema.`)) return;
+    if(!await showConfirm(`Tem certeza que deseja CANCELAR a entrada do veículo ${placa}? O registo será apagado do sistema.`)) return;
     
     const r = await fetch(`${API}/patio/${id}`, { method: 'DELETE' });
     
@@ -700,6 +786,6 @@ async function cancelarPatio(id, placa) {
         showAlert('Entrada cancelada com sucesso!');
         loadPatio();
     } else {
-        showAlert('Erro ao cancelar o registro.');
+        showAlert('Erro ao cancelar o registo.');
     }
 }
